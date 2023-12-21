@@ -1,3 +1,3 @@
 # Learnings
 
-## (Linux)['/Linux.md']
+- [Linux](/Linux.md)
