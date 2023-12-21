@@ -1,3 +1,9 @@
+# Golang
+
+- [Golang](#golang)
+  - [1. Go Installation Source](#1-go-installation-source)
+
+
 ## 1. Go Installation [Source](https://golangdocs.com/install-go-linux)
 
 ```sh
