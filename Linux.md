@@ -3,6 +3,7 @@
 - [Linux](#linux)
   - [1. How to give sudo permission inside /var/www](#1-how-to-give-sudo-permission-inside-varwww)
   - [2. How to increase disk space in EC2 Link](#2-how-to-increase-disk-space-in-ec2-link)
+  - [3. Install/Upgrading PostgreSQL](#3-installupgrading-postgresql)
 
 ## 1. How to give sudo permission inside /var/www
 
@@ -29,4 +30,15 @@ df -h | head -n 2
 df -hT
 
 sudo resize2fs /dev/root
+```
+
+## 3. Install/Upgrading PostgreSQL
+
+```sh
+# Check version of postgresql
+/usr/lib/postgresql/14/bin/psql -V
+
+# Install important dependencies for postgresql
+sudo apt install dirmngr ca-certificates software-properties-common apt-transport-https lsb-release curl -y
+
 ```
