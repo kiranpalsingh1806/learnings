@@ -15,6 +15,13 @@ sudo chmod -R 775 /var/www
 sudo usermod -aG www-data ubuntu
 ```
 
+```sh
+ls -l /var/www
+sudo chmod +w /var/www
+ls -l /var/www
+sudo chown ubuntu:ubuntu /var/www
+```
+
 ## 2. How to increase disk space in EC2 [Link](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/recognize-expanded-volume-linux.html)
 
 ```sh
