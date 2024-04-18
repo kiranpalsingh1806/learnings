@@ -14,6 +14,7 @@
   - [11. Convert ObjectId to string in $lookup](#11-convert-objectid-to-string-in-lookup)
   - [12. Group based on scores](#12-group-based-on-scores)
   - [13. Add Rank field using $setWindowFields](#13-add-rank-field-using-setwindowfields)
+  - [14. Project based on condition](#14-project-based-on-condition)
 
 ## 1. Date and Time Aggregation
 
@@ -365,6 +366,37 @@ const aggregationLogic = [
             output: {
                 rank: {
                     $rank: {}
+                }
+            }
+        }
+    }
+]
+```
+
+## 14. Project based on condition
+
+```js
+;[
+    {
+        $project: {
+            _id: 0,
+            value: '$player',
+            correctScore: {
+                $cond: {
+                    if: {
+                        $eq: ['$role', 'Batter']
+                    },
+                    then: '$batting.correctScore',
+                    else: '$bowling.correctScore'
+                }
+            },
+            incorrectScore: {
+                $cond: {
+                    if: {
+                        $eq: ['$role', 'Batter']
+                    },
+                    then: '$batting.incorrectScore',
+                    else: '$bowling.incorrectScore'
                 }
             }
         }
