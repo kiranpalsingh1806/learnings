@@ -9,6 +9,11 @@
   - [6. Regular Expression in MongoDB](#6-regular-expression-in-mongodb)
   - [7. Adding Fields based on conditions](#7-adding-fields-based-on-conditions)
   - [8. Using substrings](#8-using-substrings)
+  - [9. Convert String to ObjectId in $lookup](#9-convert-string-to-objectid-in-lookup)
+  - [10. Access ith index of array in $addFields](#10-access-ith-index-of-array-in-addfields)
+  - [11. Convert ObjectId to string in $lookup](#11-convert-objectid-to-string-in-lookup)
+  - [12. Group based on scores](#12-group-based-on-scores)
+  - [13. Add Rank field using $setWindowFields](#13-add-rank-field-using-setwindowfields)
 
 ## 1. Date and Time Aggregation
 
@@ -234,6 +239,134 @@ const aggregationLogic = [
             item: 1,
             yearSubstring: { $substr: ['$quarter', 0, 2] },
             quarterSubtring: { $substr: ['$quarter', 2, -1] }
+        }
+    }
+]
+```
+
+## 9. Convert String to ObjectId in $lookup
+
+```js
+;[
+    {
+        $lookup: {
+            from: 'Questions',
+            let: {
+                questionId: {
+                    $toObjectId: '$questionId'
+                }
+            },
+            pipeline: [
+                {
+                    $match: {
+                        $expr: {
+                            $eq: ['$_id', '$$questionId']
+                        }
+                    }
+                }
+            ],
+            as: 'Question'
+        }
+    }
+]
+```
+
+## 10. Access ith index of array in $addFields
+
+```js
+;[
+    {
+        $addFields: {
+            question: {
+                $arrayElemAt: ['$Question', 0]
+            }
+        }
+    }
+]
+```
+
+## 11. Convert ObjectId to string in $lookup
+
+```js
+;[
+    {
+        $lookup: {
+            from: 'Submissions',
+            let: {
+                contestId: '$_id',
+                userId: '$userId'
+            },
+            pipeline: [
+                {
+                    $match: {
+                        $expr: {
+                            $and: [
+                                {
+                                    $eq: [
+                                        '$contestId',
+                                        {
+                                            $toString: '$$contestId'
+                                        }
+                                    ]
+                                },
+                                {
+                                    $eq: [uid, '$uid']
+                                }
+                            ]
+                        }
+                    }
+                }
+            ],
+            as: 'submissions'
+        }
+    }
+]
+```
+
+## 12. Group based on scores
+
+```js
+;[
+    {
+        $group: {
+            _id: '$uid',
+            score: {
+                $sum: {
+                    $cond: [
+                        {
+                            $eq: ['$userAnswer', '$answer']
+                        },
+                        '$correctScore',
+                        {
+                            $subtract: [0, '$incorrectScore']
+                        }
+                    ]
+                }
+            }
+        }
+    }
+]
+```
+
+## 13. Add Rank field using $setWindowFields
+
+```js
+;[
+    {
+        $sort: {
+            score: -1
+        }
+    },
+    {
+        $setWindowFields: {
+            sortBy: {
+                score: -1
+            },
+            output: {
+                rank: {
+                    $rank: {}
+                }
+            }
         }
     }
 ]
