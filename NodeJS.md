@@ -6,6 +6,7 @@
 - [6. Mongoose Model](#6-mongoose-model)
 - [7. Auth Controller](#7-auth-controller)
 - [8. CRUD](#8-crud)
+- [9. CRUD 2](#9-crud-2)
 
 ## 1. Add Document
 
@@ -668,6 +669,222 @@ exports.deleteQuestion = async (req, res) => {
     try {
         const { id } = req.params
         const deletedQuestion = await QuestionModel.findByIdAndDelete(id)
+
+        if (!deletedQuestion) {
+            return res.status(404).json({
+                status: 404,
+                message: 'error',
+                data: {
+                    info: 'Question not found'
+                }
+            })
+        }
+
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                info: 'Question has been deleted',
+                question: deletedQuestion
+            }
+        })
+    } catch (error) {
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: error.message
+            }
+        })
+    }
+}
+```
+
+## 9. CRUD 2
+
+```js
+router.get('/api/onboarding', onboardingController.listOnboardingScreens)
+router.get('/api/onboarding/:id', onboardingController.getOnboardingScreen)
+router.post('/api/onboarding', onboardingController.addOnboarding)
+router.put('/api/onboarding/:id', onboardingController.editOnboardingScreen)
+router.delete('/api/onboarding/:id', onboardingController.deleteOnboardingScreen)
+```
+
+```js
+const Joi = require('joi')
+const OnboardingModel = require('../Models/OnboardingModel')
+
+exports.addOnboarding = async (req, res) => {
+    const { title, description, imageURL } = req.body
+
+    try {
+        const joiSchema = Joi.object({
+            title: Joi.string().required().messages({
+                'string.empty': 'Question is required'
+            }),
+            description: Joi.string().required().messages({
+                'string.empty': 'Question is required'
+            }),
+            imageURL: Joi.string().allow('').default('').messages({
+                'string.empty': 'Image URL must be a string'
+            })
+        })
+
+        const { error } = joiSchema.validate(req.body)
+        if (error) {
+            return res.status(400).json({
+                status: 400,
+                message: 'error',
+                data: {
+                    info: error.details[0].message
+                }
+            })
+        }
+
+        const newQuestion = new OnboardingModel({
+            title,
+            description,
+            imageURL,
+            createdAt: new Date().getTime()
+        })
+
+        await newQuestion.save()
+
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                info: 'Onboarding has been added'
+            }
+        })
+    } catch (error) {
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: error.message
+            }
+        })
+    }
+}
+
+exports.listOnboardingScreens = async (req, res) => {
+    try {
+        const onboardingList = await OnboardingModel.find()
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                onboardingList,
+                info: 'Question data has been fetched'
+            }
+        })
+    } catch (err) {
+        console.log('Error : ', err)
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: 'Internal server error'
+            }
+        })
+    }
+}
+
+exports.getOnboardingScreen = async (req, res) => {
+    try {
+        const data = await OnboardingModel.findById(req.params.id)
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                onboardingData: data,
+                info: 'Question data has been fetched'
+            }
+        })
+    } catch (err) {
+        console.log('Error : ', err)
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: 'Internal server error'
+            }
+        })
+    }
+}
+
+exports.editOnboardingScreen = async (req, res) => {
+    try {
+        const { id } = req.params
+        const { title, description, imageURL } = req.body
+
+        const joiSchema = Joi.object({
+            title: Joi.string().required().messages({
+                'string.empty': 'Question is required'
+            }),
+            description: Joi.string().required().messages({
+                'string.empty': 'Question is required'
+            }),
+            imageURL: Joi.string().allow('').default('').messages({
+                'string.empty': 'Image URL must be a string'
+            })
+        })
+        const { error } = joiSchema.validate(req.body)
+        if (error) {
+            return res.status(400).json({
+                status: 400,
+                message: 'error',
+                data: {
+                    info: error.details[0].message
+                }
+            })
+        }
+
+        // Update question
+        const updatedQuestion = await OnboardingModel.findByIdAndUpdate(
+            id,
+            {
+                title,
+                description,
+                imageURL
+            },
+            { new: true }
+        )
+
+        if (!updatedQuestion) {
+            return res.status(404).json({
+                status: 404,
+                message: 'error',
+                data: {
+                    info: 'Question not found'
+                }
+            })
+        }
+
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                info: 'Question has been updated',
+                question: updatedQuestion
+            }
+        })
+    } catch (error) {
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: error.message
+            }
+        })
+    }
+}
+
+exports.deleteOnboardingScreen = async (req, res) => {
+    try {
+        const { id } = req.params
+        const deletedQuestion = await OnboardingModel.findByIdAndDelete(id)
 
         if (!deletedQuestion) {
             return res.status(404).json({
