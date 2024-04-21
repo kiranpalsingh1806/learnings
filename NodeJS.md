@@ -5,6 +5,7 @@
 - [5. Routes](#5-routes)
 - [6. Mongoose Model](#6-mongoose-model)
 - [7. Auth Controller](#7-auth-controller)
+- [8. CRUD](#8-crud)
 
 ## 1. Add Document
 
@@ -265,7 +266,6 @@ const QuestionSchema = new mongoose.Schema({
     }
 })
 
-// Pre-save middleware to trim whitespace from each option in the array
 QuestionSchema.pre('save', function (next) {
     if (this.options && this.options.length > 0) {
         this.options = this.options.map((option) => option.trim())
@@ -393,6 +393,308 @@ exports.deleteFirebaseUser = async (uid) => {
     } catch (err) {
         console.log('Error : ', err)
         return false
+    }
+}
+```
+
+## 8. CRUD
+
+```js
+const mongoose = require('mongoose')
+
+const QuestionSchema = new mongoose.Schema({
+    question: {
+        type: String,
+        trim: true
+    },
+    type: {
+        type: String,
+        enum: ['Text', 'Image', 'Video'],
+        default: 'text'
+    },
+    difficulty: {
+        type: String,
+        enum: ['Easy', 'Medium', 'Hard'],
+        default: 'Easy'
+    },
+    imageURL: {
+        type: String,
+        default: ''
+    },
+    topic: {
+        type: String,
+        default: 'General'
+    },
+    videoURL: {
+        type: String,
+        default: ''
+    },
+    explanation: {
+        type: String,
+        trim: true
+    },
+    options: {
+        type: [String],
+        required: true
+    },
+    answer: {
+        type: String,
+        required: true,
+        trim: true,
+        validate: {
+            validator: function (value) {
+                return this.options.includes(value)
+            },
+            message: 'Answer must be one of the options'
+        }
+    },
+    createdAt: {
+        type: Number
+    },
+    updatedAt: {
+        type: Number
+    }
+})
+
+QuestionSchema.pre('save', function (next) {
+    if (this.options && this.options.length > 0) {
+        this.options = this.options.map((option) => option.trim())
+    }
+    next()
+})
+
+module.exports = mongoose.model('Questions', QuestionSchema, 'Questions')
+```
+
+```js
+const QuestionModel = require('../Models/QuestionModel')
+const Joi = require('joi')
+
+exports.getQuestionsList = async (req, res) => {
+    try {
+        const questionsList = await QuestionModel.aggregate([
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            },
+            {
+                $limit: 100
+            }
+        ])
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                questionsList,
+                info: 'Question data has been fetched'
+            }
+        })
+    } catch (err) {
+        console.log('Error : ', err)
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: 'Internal server error'
+            }
+        })
+    }
+}
+exports.addNewQuestion = async (req, res) => {
+    const { question, topic, options, answer, type, imageURL, explanation, difficulty, videoURL } = req.body
+
+    try {
+        const questionSchema = Joi.object({
+            question: Joi.string().required().messages({
+                'string.empty': 'Question is required'
+            }),
+            options: Joi.array().items(Joi.string().required()).min(2).required().messages({
+                'array.base': 'Options must be an array',
+                'array.min': 'At least two options are required',
+                'any.required': 'Options are required'
+            }),
+            answer: Joi.string().trim().required().messages({
+                'string.empty': 'Answer is required'
+            }),
+            type: Joi.string().valid('Text', 'Image', 'Video').default('text').messages({
+                'any.only': 'Type value is not valid'
+            }),
+            imageURL: Joi.string().allow('').default('').messages({
+                'string.empty': 'Image URL must be a string'
+            }),
+            explanation: Joi.string().trim().allow('').default('').messages({
+                'string.empty': 'Explanation must be a string'
+            }),
+            topic: Joi.string().trim().allow('').default('').messages({
+                'string.empty': 'Topic must be a string'
+            }),
+            difficulty: Joi.string().valid('Easy', 'Medium', 'Hard').required().messages({
+                'any.only': 'Difficulty must be one of: Easy, Medium, Hard'
+            }),
+            videoURL: Joi.string().allow('').default('').messages({
+                'string.empty': 'Video URL must be a string'
+            })
+        })
+
+        const { error } = questionSchema.validate(req.body)
+        if (error) {
+            return res.status(400).json({
+                status: 400,
+                message: 'error',
+                data: {
+                    info: error.details[0].message
+                }
+            })
+        }
+
+        const newQuestion = new QuestionModel({
+            question,
+            topic,
+            options,
+            createdAt: new Date().getTime(),
+            updatedAt: new Date().getTime(),
+            answer,
+            type,
+            imageURL,
+            explanation,
+            difficulty,
+            videoURL
+        })
+
+        await newQuestion.save()
+
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                info: 'Question has been added'
+            }
+        })
+    } catch (error) {
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: error.message
+            }
+        })
+    }
+}
+
+exports.editQuestion = async (req, res) => {
+    try {
+        const { questionId } = req.params
+        const { question, options, answer, type, imageURL, explanation } = req.body
+
+        // Validate input
+        const questionSchema = Joi.object({
+            question: Joi.string().required().messages({
+                'string.empty': 'Question is required'
+            }),
+            options: Joi.array().items(Joi.string().required()).min(2).required().messages({
+                'array.base': 'Options must be an array',
+                'array.min': 'At least two options are required',
+                'any.required': 'Options are required'
+            }),
+            answer: Joi.string().trim().required().messages({
+                'string.empty': 'Answer is required'
+            }),
+            type: Joi.string().valid('text', 'image').default('text').messages({
+                'any.only': 'Type value is not valid'
+            }),
+            imageURL: Joi.string().allow('').default('').messages({
+                'string.empty': 'Image URL must be a string'
+            }),
+            explanation: Joi.string().trim().allow('').default('').messages({
+                'string.empty': 'Explanation must be a string'
+            })
+        })
+        const { error } = questionSchema.validate(req.body)
+        if (error) {
+            return res.status(400).json({
+                status: 400,
+                message: 'error',
+                data: {
+                    info: error.details[0].message
+                }
+            })
+        }
+
+        // Update question
+        const updatedQuestion = await QuestionModel.findByIdAndUpdate(
+            questionId,
+            {
+                question,
+                options,
+                answer,
+                type,
+                imageURL,
+                explanation
+            },
+            { new: true }
+        )
+
+        if (!updatedQuestion) {
+            return res.status(404).json({
+                status: 404,
+                message: 'error',
+                data: {
+                    info: 'Question not found'
+                }
+            })
+        }
+
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                info: 'Question has been updated',
+                question: updatedQuestion
+            }
+        })
+    } catch (error) {
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: error.message
+            }
+        })
+    }
+}
+
+exports.deleteQuestion = async (req, res) => {
+    try {
+        const { id } = req.params
+        const deletedQuestion = await QuestionModel.findByIdAndDelete(id)
+
+        if (!deletedQuestion) {
+            return res.status(404).json({
+                status: 404,
+                message: 'error',
+                data: {
+                    info: 'Question not found'
+                }
+            })
+        }
+
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                info: 'Question has been deleted',
+                question: deletedQuestion
+            }
+        })
+    } catch (error) {
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: error.message
+            }
+        })
     }
 }
 ```
