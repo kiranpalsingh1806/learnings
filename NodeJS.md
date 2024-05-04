@@ -7,6 +7,8 @@
 - [7. Auth Controller](#7-auth-controller)
 - [8. CRUD](#8-crud)
 - [9. CRUD 2](#9-crud-2)
+- [10. Topic CRUD](#10-topic-crud)
+- [11. Question CRUD](#11-question-crud)
 
 ## 1. Add Document
 
@@ -914,4 +916,574 @@ exports.deleteOnboardingScreen = async (req, res) => {
         })
     }
 }
+```
+
+## 10. Topic CRUD
+
+```js
+const router = require('express').Router()
+const topicController = require('../Controller/topicController')
+
+router.get('/api/admin/topics', topicController.getTopicsList)
+router.get('/api/user/topics', topicController.getTopicsListForUser)
+router.post('/api/admin/topic', topicController.addNewTopic)
+router.put('/api/admin/topic/:id', topicController.editTopic)
+router.delete('/api/admin/topic/:id', topicController.deleteTopic)
+
+module.exports = router
+```
+
+```js
+const TopicModel = require('../Models/TopicModel')
+const Joi = require('joi')
+
+exports.getTopicsList = async (req, res) => {
+    try {
+        const topicsList = await TopicModel.find()
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                topicsList,
+                info: 'Data has been fetched'
+            }
+        })
+    } catch (err) {
+        console.log('Error : ', err)
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: 'Internal server error'
+            }
+        })
+    }
+}
+
+exports.getTopicsListForUser = async (req, res) => {
+    try {
+        const data = await TopicModel.aggregate([
+            {
+                $group: {
+                    _id: null,
+                    topicsList: {
+                        $push: '$name'
+                    }
+                }
+            }
+        ])
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                topicsList: data[0].topicsList,
+                info: 'Data has been fetched'
+            }
+        })
+    } catch (err) {
+        console.log('Error : ', err)
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: 'Internal server error'
+            }
+        })
+    }
+}
+
+exports.addNewTopic = async (req, res) => {
+    const { name, description } = req.body
+
+    try {
+        const joiSchema = Joi.object({
+            name: Joi.string().required().messages({
+                'string.empty': 'Name is required'
+            }),
+            description: Joi.string().required().messages({
+                'string.empty': 'Description is required'
+            })
+        })
+
+        const { error } = joiSchema.validate(req.body)
+        if (error) {
+            return res.status(400).json({
+                status: 400,
+                message: 'error',
+                data: {
+                    info: error.details[0].message
+                }
+            })
+        }
+
+        const newTopic = new TopicModel({
+            name,
+            description,
+            createdAt: new Date().getTime(),
+            updatedAt: new Date().getTime()
+        })
+
+        await newTopic.save()
+
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                info: 'Data has been added'
+            }
+        })
+    } catch (error) {
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: error.message
+            }
+        })
+    }
+}
+
+exports.editTopic = async (req, res) => {
+    try {
+        const { id } = req.params
+        const { name, description } = req.body
+
+        const joiSchema = Joi.object({
+            name: Joi.string().required().messages({
+                'string.empty': 'Name is required'
+            }),
+            description: Joi.string().required().messages({
+                'string.empty': 'Description is required'
+            })
+        })
+        const { error } = joiSchema.validate(req.body)
+        if (error) {
+            return res.status(400).json({
+                status: 400,
+                message: 'error',
+                data: {
+                    info: error.details[0].message
+                }
+            })
+        }
+
+        const updatedTopic = await TopicModel.findByIdAndUpdate(
+            id,
+            {
+                name,
+                description
+            },
+            { new: true }
+        )
+
+        if (!updatedTopic) {
+            return res.status(404).json({
+                status: 404,
+                message: 'error',
+                data: {
+                    info: 'Topic not found'
+                }
+            })
+        }
+
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                info: 'Topic has been updated',
+                topic: updatedTopic
+            }
+        })
+    } catch (error) {
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: error.message
+            }
+        })
+    }
+}
+
+exports.deleteTopic = async (req, res) => {
+    try {
+        const { id } = req.params
+        const deletedTopic = await TopicModel.findByIdAndDelete(id)
+
+        if (!deletedTopic) {
+            return res.status(404).json({
+                status: 404,
+                message: 'error',
+                data: {
+                    info: 'Topic not found'
+                }
+            })
+        }
+
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                info: 'Topic has been deleted',
+                topic: deletedTopic
+            }
+        })
+    } catch (error) {
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: error.message
+            }
+        })
+    }
+}
+
+```
+
+## 11. Question CRUD
+
+```js
+const router = require('express').Router()
+const questionController = require('../Controller/questionController')
+
+router.get('/api/admin/questions', questionController.getQuestionsList)
+router.get('/api/admin/question/:id', questionController.getQuestionData)
+router.post('/api/admin/question', questionController.addNewQuestion)
+router.put('/api/admin/question/:id', questionController.editQuestion)
+router.delete('/api/admin/question/:id', questionController.deleteQuestion)
+
+router.get('/api/user/questions/v1', questionController.getQuestionsListForTopic)
+router.get('/api/admin/search/v1', questionController.searchQuestion)
+
+module.exports = router
+```
+
+```js
+const QuestionModel = require('../Models/QuestionModel')
+const Joi = require('joi')
+
+exports.getQuestionsList = async (req, res) => {
+    try {
+        const questionsList = await QuestionModel.aggregate([
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            },
+            {
+                $limit: 1000
+            }
+        ])
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                questionsList,
+                info: 'Question data has been fetched'
+            }
+        })
+    } catch (err) {
+        console.log('Error : ', err)
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: 'Internal server error'
+            }
+        })
+    }
+}
+
+exports.getQuestionData = async (req, res) => {
+    try {
+        const { id } = req.params
+        const data = await QuestionModel.findById(id)
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                question: data,
+                info: 'Question data has been fetched'
+            }
+        })
+    } catch (err) {
+        console.log('Error : ', err)
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: 'Internal server error'
+            }
+        })
+    }
+}
+
+exports.getQuestionsListForTopic = async (req, res) => {
+    try {
+        const { topic } = req.query
+        const questionsList = await QuestionModel.aggregate([
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            },
+            {
+                $match: {
+                    topic
+                }
+            },
+            {
+                $limit: 1000
+            }
+        ])
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                questionsList,
+                info: 'Question data has been fetched'
+            }
+        })
+    } catch (err) {
+        console.log('Error : ', err)
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: 'Internal server error'
+            }
+        })
+    }
+}
+
+exports.searchQuestion = async (req, res) => {
+    try {
+        const { text } = req.query
+        const questionsList = await QuestionModel.aggregate([
+            {
+                $match: {
+                    question: { $regex: text, $options: 'i' }
+                }
+            },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            }
+        ])
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                questionsList,
+                info: 'Question data has been fetched'
+            }
+        })
+    } catch (err) {
+        console.log('Error : ', err)
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: 'Internal server error'
+            }
+        })
+    }
+}
+
+exports.addNewQuestion = async (req, res) => {
+    const { question, topic, options, correctOption, explanation } = req.body
+
+    console.log('Request Body : ', req.body)
+
+    try {
+        const questionSchema = Joi.object({
+            question: Joi.string().required().messages({
+                'string.empty': 'Question is required'
+            }),
+            options: Joi.array().items(Joi.string().required()).min(2).required().messages({
+                'array.base': 'Options must be an array',
+                'array.min': 'At least two options are required',
+                'any.required': 'Options are required'
+            }),
+            correctOption: Joi.string().trim().required().messages({
+                'string.empty': 'Correct option is required'
+            }),
+            explanation: Joi.string().trim().allow('').default('').messages({
+                'string.empty': 'Explanation must be a string'
+            }),
+            topic: Joi.string().trim().allow('').default('').messages({
+                'string.empty': 'Topic must be a string'
+            })
+        })
+
+        const { error } = questionSchema.validate(req.body)
+        if (error) {
+            return res.status(400).json({
+                status: 400,
+                message: 'error',
+                data: {
+                    info: error.details[0].message
+                }
+            })
+        }
+
+        const questionCount = await QuestionModel.countDocuments({ question, correctOption })
+        if (questionCount > 0) {
+            return res.status(400).json({
+                status: 400,
+                message: 'error',
+                data: {
+                    info: 'Question already exissts'
+                }
+            })
+        }
+
+        const newQuestion = new QuestionModel({
+            question,
+            topic,
+            options,
+            createdAt: new Date().getTime(),
+            updatedAt: new Date().getTime(),
+            correctOption,
+            explanation
+        })
+
+        await newQuestion.save()
+
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                info: 'Question has been added'
+            }
+        })
+    } catch (error) {
+        console.log('Error : ', error)
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: error.message
+            }
+        })
+    }
+}
+
+exports.editQuestion = async (req, res) => {
+    try {
+        const { id } = req.params
+        const { question, topic, options, correctOption, explanation } = req.body
+
+        // Validate input
+        const questionSchema = Joi.object({
+            question: Joi.string().required().messages({
+                'string.empty': 'Question is required'
+            }),
+            options: Joi.array().items(Joi.string().required()).min(2).required().messages({
+                'array.base': 'Options must be an array',
+                'array.min': 'At least two options are required',
+                'any.required': 'Options are required'
+            }),
+            correctOption: Joi.string().trim().required().messages({
+                'string.empty': 'Correct Option is required'
+            }),
+            explanation: Joi.string().trim().allow('').default('').messages({
+                'string.empty': 'Explanation must be a string'
+            }),
+            topic: Joi.string().trim().allow('').default('').messages({
+                'string.empty': 'Topic must be a string'
+            })
+        }).unknown(true)
+
+        const { error } = questionSchema.validate(req.body)
+        if (error) {
+            console.log('Error : ', error)
+            return res.status(400).json({
+                status: 400,
+                message: 'error',
+                data: {
+                    info: error.details[0].message
+                }
+            })
+        }
+
+        // Update question
+        const updatedQuestion = await QuestionModel.findByIdAndUpdate(
+            id,
+            {
+                question,
+                topic,
+                options,
+                correctOption,
+                explanation,
+                updatedAt: new Date().getTime() // Update updatedAt field
+            },
+            { new: true }
+        )
+
+        if (!updatedQuestion) {
+            return res.status(404).json({
+                status: 404,
+                message: 'error',
+                data: {
+                    info: 'Question not found'
+                }
+            })
+        }
+
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                info: 'Question has been updated',
+                question: updatedQuestion
+            }
+        })
+    } catch (error) {
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: error.message
+            }
+        })
+    }
+}
+
+exports.deleteQuestion = async (req, res) => {
+    try {
+        const { id } = req.params
+        const deletedQuestion = await QuestionModel.findByIdAndDelete(id)
+
+        if (!deletedQuestion) {
+            return res.status(404).json({
+                status: 404,
+                message: 'error',
+                data: {
+                    info: 'Question not found'
+                }
+            })
+        }
+
+        res.json({
+            status: 200,
+            message: 'success',
+            data: {
+                info: 'Question has been deleted',
+                question: deletedQuestion
+            }
+        })
+    } catch (error) {
+        res.status(500).json({
+            status: 500,
+            message: 'error',
+            data: {
+                info: error.message
+            }
+        })
+    }
+}
+
 ```
