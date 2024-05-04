@@ -1,6 +1,7 @@
 - [1. Button Color in Kotlin](#1-button-color-in-kotlin)
 - [2. Box with Gradient Color](#2-box-with-gradient-color)
 - [3. Span Item in Lazy Vertical Grid](#3-span-item-in-lazy-vertical-grid)
+- [4. Retrofit](#4-retrofit)
 
 ## 1. Button Color in Kotlin
 
@@ -45,4 +46,16 @@ Box(
 ) {
     item (span = { GridItemSpan(2) })
 }
+```
+
+## 4. Retrofit
+
+```kt
+@GET("api/gkinfact/v2/facts/daily")
+suspend fun getGeneralKnowledgeFactsV2(@Query("page") page: Int): Response<ApiResponse>
+```
+
+```kt
+@GET("api/user/contests/new/{uid}")
+suspend fun getNewUpcomingListForUserByID(@Path("uid") userId: String): Response<GetContestsListForUserResponse>
 ```
