@@ -4,6 +4,7 @@
 - [4. Retrofit](#4-retrofit)
 - [5. Custom Card](#5-custom-card)
 - [6. Circular Progress](#6-circular-progress)
+- [7. Loading Animation](#7-loading-animation)
 
 ## 1. Button Color in Kotlin
 
@@ -350,5 +351,77 @@ fun EmbeddedElements(
         textAlign = TextAlign.Center,
         fontWeight = FontWeight.Bold
     )
+}
+```
+
+## 7. Loading Animation
+
+```kt
+Box(
+    modifier = Modifier
+        .fillMaxSize()
+        .padding(2.dp)
+) {
+    if (leaderboard.value.isEmpty()) {
+        LoadingAnimation(modifier = Modifier.size(100.dp).align(Alignment.Center))
+    } 
+}
+```
+
+```kt
+@Composable
+fun LoadingAnimation(
+    modifier: Modifier = Modifier,
+    circleSize: Dp = 25.dp,
+    circleColor: Color = colorResource(id = R.color.my_blue_1),
+    spaceBetween: Dp = 10.dp,
+    travelDistance: Dp = 20.dp
+) {
+    val circles = listOf(
+        remember { Animatable(initialValue = 0f) },
+        remember { Animatable(initialValue = 0f) },
+        remember { Animatable(initialValue = 0f) }
+    )
+
+    circles.forEachIndexed { index, animatable ->
+        LaunchedEffect(key1 = animatable) {
+            delay(index * 100L)
+            animatable.animateTo(
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = keyframes {
+                        durationMillis = 1200
+                        0.0f at 0 with LinearOutSlowInEasing
+                        1.0f at 300 with LinearOutSlowInEasing
+                        0.0f at 600 with LinearOutSlowInEasing
+                        0.0f at 1200 with LinearOutSlowInEasing
+                    },
+                    repeatMode = RepeatMode.Restart
+                )
+            )
+        }
+    }
+
+    val circleValues = circles.map { it.value }
+    val distance = with(LocalDensity.current) { travelDistance.toPx() }
+
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(spaceBetween)
+    ) {
+        circleValues.forEach { value ->
+            Box(
+                modifier = Modifier
+                    .size(circleSize)
+                    .graphicsLayer {
+                        translationY = -value * distance
+                    }
+                    .background(
+                        color = circleColor,
+                        shape = CircleShape
+                    )
+            )
+        }
+    }
 }
 ```
