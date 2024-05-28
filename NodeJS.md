@@ -9,6 +9,7 @@
 - [9. CRUD 2](#9-crud-2)
 - [10. Topic CRUD](#10-topic-crud)
 - [11. Question CRUD](#11-question-crud)
+- [12. Bulk Write](#12-bulk-write)
 
 ## 1. Add Document
 
@@ -1138,7 +1139,6 @@ exports.deleteTopic = async (req, res) => {
         })
     }
 }
-
 ```
 
 ## 11. Question CRUD
@@ -1485,5 +1485,36 @@ exports.deleteQuestion = async (req, res) => {
         })
     }
 }
+```
 
+## 12. Bulk Write
+
+```js
+exports.oneTimeTestFunction = async (req, res) => {
+    const { count, skip } = req.body
+    const documentsList = dummyModel.aggregate([{ $skip: skip }, { $limit: count }])
+
+    documentsList
+        .then(async (documentArr) => {
+            const bulkOps = []
+            for (const document of documentArr) {
+                bulkOps.push({
+                    updateOne: {
+                        filter: { _id: document._id },
+                        update: { $set: { hidden: true } }
+                    }
+                })
+            }
+            const result = await dummyModel.bulkWrite(bulkOps, { ordered: false })
+        })
+        .catch((err) => {
+            console.error('Error:', err)
+        })
+
+    res.json({
+        status: 200,
+        message: 'success',
+        data: { info: 'The data has been updated' }
+    })
+}
 ```
