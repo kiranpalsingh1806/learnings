@@ -4,6 +4,7 @@
   - [1. How to give sudo permission inside /var/www](#1-how-to-give-sudo-permission-inside-varwww)
   - [2. How to increase disk space in EC2 Link](#2-how-to-increase-disk-space-in-ec2-link)
   - [3. Install/Upgrading PostgreSQL](#3-installupgrading-postgresql)
+  - [4. Clear Cache Memory](#4-clear-cache-memory)
 
 ## 1. How to give sudo permission inside /var/www
 
@@ -48,4 +49,12 @@ sudo resize2fs /dev/root
 # Install important dependencies for postgresql
 sudo apt install dirmngr ca-certificates software-properties-common apt-transport-https lsb-release curl -y
 
+```
+
+## 4. Clear Cache Memory
+
+```sh
+free -h
+sudo sync; sudo sysctl -w vm.drop_caches=3
+free -h
 ```
