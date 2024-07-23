@@ -26,6 +26,8 @@ sudo chown ubuntu:ubuntu /var/www
 ## 2. How to increase disk space in EC2 [Link](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/recognize-expanded-volume-linux.html)
 
 ```sh
+# Increase storage from AWS Console 
+
 # Check the disk space
 sudo du -h --max-depth=1
 
@@ -36,6 +38,10 @@ sudo fdisk -l
 df -h | head -n 2
 
 df -hT
+
+sudo growpart /dev/nvme0n1 1
+
+lsblk
 
 sudo resize2fs /dev/root
 ```
