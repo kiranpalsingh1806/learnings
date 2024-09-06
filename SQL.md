@@ -7,6 +7,18 @@
 - [7. Install DBeaver](#7-install-dbeaver)
 - [8. Reset MySQL Root password](#8-reset-mysql-root-password)
 - [9. Create New MySQL user](#9-create-new-mysql-user)
+- [10. Common Commands to use](#10-common-commands-to-use)
+- [11. Sample Commands for JOINS](#11-sample-commands-for-joins)
+  - [Create Database](#create-database)
+  - [Create Table](#create-table)
+  - [Data Insertion](#data-insertion)
+  - [Inner Join](#inner-join)
+  - [Left Join](#left-join)
+  - [Right Join](#right-join)
+  - [Full Outer Join](#full-outer-join)
+  - [Self Join](#self-join)
+  - [Cross Joins](#cross-joins)
+  - [Complex Queries](#complex-queries)
 
 ## 1. Install MySQL server
 
@@ -145,4 +157,142 @@ CREATE USER 'benedetta_user'@'localhost' IDENTIFIED BY 'strongpassword';
 GRANT ALL PRIVILEGES ON benedetta.* TO 'benedetta_user'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
+```
+
+## 10. Common Commands to use
+
+```sh
+SELECT * FROM admin WHERE name LIKE 't%';
+SELECT * FROM admin WHERE name LIKE '%t%';
+SELECT * FROM admin WHERE name LIKE 'ess%' OR email LIKE 't%'
+```
+
+## 11. Sample Commands for JOINS
+
+### Create Database
+```sh
+CREATE DATABASE testdb;
+USE testdb;
+```
+
+### Create Table
+```sh
+-- Create Employees Table
+CREATE TABLE employees (
+    emp_id INT PRIMARY KEY,
+    emp_name VARCHAR(50),
+    dept_id INT,
+    salary DECIMAL(10,2)
+);
+
+-- Create Departments Table
+CREATE TABLE departments (
+    dept_id INT PRIMARY KEY,
+    dept_name VARCHAR(50)
+);
+
+-- Create Projects Table
+CREATE TABLE projects (
+    project_id INT PRIMARY KEY,
+    project_name VARCHAR(50),
+    emp_id INT
+);
+```
+
+### Data Insertion
+```sh
+-- Insert Data into Employees
+INSERT INTO employees (emp_id, emp_name, dept_id, salary) VALUES
+(1, 'Alice', 1, 6000.00),
+(2, 'Bob', 2, 7000.00),
+(3, 'Charlie', 1, 8000.00),
+(4, 'David', 3, 5500.00);
+
+-- Insert Data into Departments
+INSERT INTO departments (dept_id, dept_name) VALUES
+(1, 'HR'),
+(2, 'IT'),
+(3, 'Finance');
+
+-- Insert Data into Projects
+INSERT INTO projects (project_id, project_name, emp_id) VALUES
+(1, 'Project A', 1),
+(2, 'Project B', 2),
+(3, 'Project C', 1),
+(4, 'Project D', 3);
+```
+
+### Inner Join
+```sh
+SELECT employees.emp_name, departments.dept_name
+FROM employees
+INNER JOIN departments ON employees.dept_id = departments.dept_id;
+```
+
+### Left Join
+```sh
+SELECT employees.emp_name, projects.project_name
+FROM employees
+LEFT JOIN projects ON employees.emp_id = projects.emp_id;
+```
+
+### Right Join
+```sh
+SELECT employees.emp_name, projects.project_name
+FROM employees
+RIGHT JOIN projects ON employees.emp_id = projects.emp_id;
+```
+
+### Full Outer Join
+
+```sh
+SELECT employees.emp_name, projects.project_name
+FROM employees
+LEFT JOIN projects ON employees.emp_id = projects.emp_id
+UNION
+SELECT employees.emp_name, projects.project_name
+FROM employees
+RIGHT JOIN projects ON employees.emp_id = projects.emp_id;
+```
+
+### Self Join
+
+```sh
+SELECT e1.emp_name AS Employee1, e2.emp_name AS Employee2, e1.dept_id
+FROM employees e1
+INNER JOIN employees e2 ON e1.dept_id = e2.dept_id AND e1.emp_id != e2.emp_id;
+```
+
+### Cross Joins
+
+```sh
+SELECT employees.emp_name, projects.project_name
+FROM employees
+CROSS JOIN projects;
+```
+
+### Complex Queries
+
+```sh
+SELECT e.emp_name, e.salary, p.project_name
+FROM employees e
+INNER JOIN projects p ON e.emp_id = p.emp_id
+WHERE e.salary > 6000;
+```
+
+```sh
+SELECT emp_name, salary
+FROM employees
+WHERE salary > (SELECT AVG(salary) FROM employees);
+```
+
+```sh
+SELECT d.dept_name, SUM(e.salary) AS total_salary
+FROM employees e
+INNER JOIN departments d ON e.dept_id = d.dept_id
+GROUP BY d.dept_name;
+```
+
+```sh
+DROP DATABASE testdb;
 ```
