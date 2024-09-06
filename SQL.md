@@ -33,6 +33,22 @@
   - [Join Across Multiple Tables: List Employees, Their Departments, and Projects](#join-across-multiple-tables-list-employees-their-departments-and-projects)
   - [Nested Queries with Joins: Find the Department with the Highest Total Salary](#nested-queries-with-joins-find-the-department-with-the-highest-total-salary)
   - [Cleanup function](#cleanup-function)
+- [13. More Advanced Queries for Joins](#13-more-advanced-queries-for-joins)
+  - [Recursive Common Table Expression (CTE)](#recursive-common-table-expression-cte)
+  - [JSON Data Handling](#json-data-handling)
+  - [Window Functions: Running Total](#window-functions-running-total)
+  - [Advanced Grouping: GROUPING SETS, CUBE, and ROLLUP](#advanced-grouping-grouping-sets-cube-and-rollup)
+  - [Lateral Join (Correlated Subquery in FROM)](#lateral-join-correlated-subquery-in-from)
+  - [Dynamic Pivoting](#dynamic-pivoting)
+  - [Advanced Filtering: Filtering Based on Rank](#advanced-filtering-filtering-based-on-rank)
+  - [Advanced Subquery with EXISTS](#advanced-subquery-with-exists)
+  - [Advanced Aggregate Functions: Percentile Calculations](#advanced-aggregate-functions-percentile-calculations)
+  - [Common Table Expressions (CTEs) with Recursion for Date Ranges](#common-table-expressions-ctes-with-recursion-for-date-ranges)
+  - [Full Text Search](#full-text-search)
+  - [Multi-Table Update](#multi-table-update)
+  - [Stored Procedures with Dynamic SQL](#stored-procedures-with-dynamic-sql)
+  - [Conditional Aggregates with CASE](#conditional-aggregates-with-case)
+  - [Query Optimization: Using Indexes](#query-optimization-using-indexes)
 
 ## 1. Install MySQL server
 
@@ -468,4 +484,216 @@ DROP TABLE departments;
 
 -- Drop the Database
 DROP DATABASE testdb;
+```
+
+## 13. More Advanced Queries for Joins
+
+### Recursive Common Table Expression (CTE)
+```sh
+-- Add Manager ID to Employees
+ALTER TABLE employees ADD COLUMN manager_id INT DEFAULT NULL;
+
+-- Update some sample data
+UPDATE employees SET manager_id = 1 WHERE emp_id IN (2, 3);  -- Bob and Charlie report to Alice
+UPDATE employees SET manager_id = 2 WHERE emp_id = 5;        -- Eve reports to Bob
+UPDATE employees SET manager_id = 3 WHERE emp_id = 4;        -- David reports to Charlie
+
+-- Recursive Query: Find the chain of command for each employee
+WITH RECURSIVE EmployeeHierarchy AS (
+    SELECT emp_id, emp_name, manager_id, 1 AS level
+    FROM employees
+    WHERE manager_id IS NULL
+    UNION ALL
+    SELECT e.emp_id, e.emp_name, e.manager_id, eh.level + 1
+    FROM employees e
+    JOIN EmployeeHierarchy eh ON e.manager_id = eh.emp_id
+)
+SELECT * FROM EmployeeHierarchy;
+```
+
+### JSON Data Handling
+
+```sh
+-- Add a JSON column to the employees table
+ALTER TABLE employees ADD COLUMN details JSON;
+
+-- Update sample data to include JSON
+UPDATE employees 
+SET details = JSON_OBJECT('age', 30, 'hobbies', JSON_ARRAY('reading', 'sports'))
+WHERE emp_id = 1;
+
+-- Query to extract specific data from JSON
+SELECT emp_name, JSON_UNQUOTE(JSON_EXTRACT(details, '$.age')) AS age
+FROM employees
+WHERE JSON_CONTAINS(details, '"reading"', '$.hobbies');
+```
+
+### Window Functions: Running Total
+```sh
+-- Calculate Running Total of Salaries Across All Employees
+SELECT emp_name, salary,
+       SUM(salary) OVER (ORDER BY emp_id) AS running_total
+FROM employees;
+```
+
+
+### Advanced Grouping: GROUPING SETS, CUBE, and ROLLUP
+```sh
+-- Use ROLLUP to get the total salary per department and a grand total
+SELECT d.dept_name, SUM(e.salary) AS total_salary
+FROM employees e
+JOIN departments d ON e.dept_id = d.dept_id
+GROUP BY d.dept_name WITH ROLLUP;
+
+-- Use CUBE to get total salary by both department and manager
+SELECT d.dept_name, e.manager_id, SUM(e.salary) AS total_salary
+FROM employees e
+JOIN departments d ON e.dept_id = d.dept_id
+GROUP BY CUBE(d.dept_name, e.manager_id);
+```
+
+### Lateral Join (Correlated Subquery in FROM)
+
+```sh
+-- For each employee, find the highest salary in their department
+SELECT e.emp_name, e.salary, d.dept_name, max_salaries.max_salary
+FROM employees e
+JOIN departments d ON e.dept_id = d.dept_id
+JOIN LATERAL (
+    SELECT MAX(salary) AS max_salary
+    FROM employees
+    WHERE dept_id = e.dept_id
+) AS max_salaries ON TRUE;
+```
+
+### Dynamic Pivoting
+
+```sh
+-- Example of dynamic pivoting to display total salaries by department and project
+SELECT 
+    d.dept_name,
+    SUM(CASE WHEN p.project_name = 'Project A' THEN e.salary ELSE 0 END) AS ProjectA,
+    SUM(CASE WHEN p.project_name = 'Project B' THEN e.salary ELSE 0 END) AS ProjectB,
+    SUM(CASE WHEN p.project_name = 'Project C' THEN e.salary ELSE 0 END) AS ProjectC
+FROM employees e
+JOIN departments d ON e.dept_id = d.dept_id
+LEFT JOIN projects p ON e.emp_id = p.emp_id
+GROUP BY d.dept_name;
+```
+
+### Advanced Filtering: Filtering Based on Rank
+
+```sh
+-- Find the second-highest paid employee in each department
+WITH RankedEmployees AS (
+    SELECT emp_name, dept_id, salary,
+           ROW_NUMBER() OVER (PARTITION BY dept_id ORDER BY salary DESC) AS salary_rank
+    FROM employees
+)
+SELECT emp_name, dept_id, salary
+FROM RankedEmployees
+WHERE salary_rank = 2;
+```
+
+### Advanced Subquery with EXISTS
+
+```sh
+-- Find departments where all employees are assigned to at least one project
+SELECT dept_name
+FROM departments d
+WHERE EXISTS (
+    SELECT 1
+    FROM employees e
+    JOIN projects p ON e.emp_id = p.emp_id
+    WHERE e.dept_id = d.dept_id
+);
+```
+
+### Advanced Aggregate Functions: Percentile Calculations
+
+```sh
+-- Calculate the 75th percentile salary for employees
+SELECT emp_name, salary,
+       PERCENT_RANK() OVER (ORDER BY salary DESC) AS percentile_rank
+FROM employees
+WHERE PERCENT_RANK() OVER (ORDER BY salary DESC) >= 0.75;
+```
+
+### Common Table Expressions (CTEs) with Recursion for Date Ranges
+```sh
+-- Generate a range of dates using recursive CTE
+WITH RECURSIVE DateRange AS (
+    SELECT CURDATE() AS date
+    UNION ALL
+    SELECT date + INTERVAL 1 DAY
+    FROM DateRange
+    WHERE date + INTERVAL 1 DAY <= CURDATE() + INTERVAL 7 DAY
+)
+SELECT *
+FROM DateRange;
+```
+
+### Full Text Search
+
+```sh
+-- Add a FULLTEXT index to a column for full-text search
+ALTER TABLE employees ADD FULLTEXT(emp_name);
+
+-- Use MATCH AGAINST for full-text search
+SELECT emp_name
+FROM employees
+WHERE MATCH(emp_name) AGAINST ('Alice Bob' IN NATURAL LANGUAGE MODE);
+```
+
+### Multi-Table Update
+
+```sh
+-- Update employee salaries by department
+UPDATE employees e
+JOIN departments d ON e.dept_id = d.dept_id
+SET e.salary = e.salary * 1.10
+WHERE d.dept_name = 'IT';
+```
+
+### Stored Procedures with Dynamic SQL
+
+```sh
+DELIMITER //
+
+CREATE PROCEDURE GetEmployeesBySalaryRange(IN min_salary DECIMAL(10,2), IN max_salary DECIMAL(10,2))
+BEGIN
+    SET @sql = CONCAT('SELECT emp_name, salary FROM employees WHERE salary BETWEEN ', min_salary, ' AND ', max_salary);
+    PREPARE stmt FROM @sql;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+END //
+
+DELIMITER ;
+
+-- Call the procedure
+CALL GetEmployeesBySalaryRange(6000, 9000);
+```
+
+### Conditional Aggregates with CASE
+
+```sh
+-- Find the total number of employees and those earning more than 7000 by department
+SELECT d.dept_name,
+       COUNT(*) AS total_employees,
+       SUM(CASE WHEN e.salary > 7000 THEN 1 ELSE 0 END) AS high_earners
+FROM employees e
+JOIN departments d ON e.dept_id = d.dept_id
+GROUP BY d.dept_name;
+```
+
+### Query Optimization: Using Indexes
+
+```sh
+-- Create index on the department ID in employees table for faster joins
+CREATE INDEX idx_dept_id ON employees(dept_id);
+
+-- Analyze the performance of a query using EXPLAIN
+EXPLAIN SELECT e.emp_name, d.dept_name
+FROM employees e
+JOIN departments d ON e.dept_id = d.dept_id;
 ```
